@@ -7,6 +7,7 @@ const {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
+  MessageFlags,
 } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
@@ -23,7 +24,6 @@ for (const file of fs.readdirSync(commandsPath).filter(f => f.endsWith('.js'))) 
   }
 }
 
-// 파티별 신청자 목록: Map<messageId, Set<userId>>
 const partyApplicants = new Map();
 
 client.once(Events.ClientReady, () => {
@@ -39,7 +39,7 @@ client.on(Events.InteractionCreate, async interaction => {
       await command.execute(interaction);
     } catch (err) {
       console.error('슬래시 커맨드 오류:', err);
-      const msg = { content: '❌ 오류가 발생했습니다.', ephemeral: true };
+      const msg = { content: '❌ 오류가 발생했습니다.', flags: MessageFlags.Ephemeral };
       interaction.replied || interaction.deferred
         ? await interaction.followUp(msg)
         : await interaction.reply(msg);
@@ -58,12 +58,18 @@ client.on(Events.InteractionCreate, async interaction => {
     // ── 참가하기 ──────────────────────────────────────────────────────────
     if (action === 'join_party') {
       if (interaction.user.id === creatorId) {
-        return interaction.reply({ content: '❌ 본인이 만든 파티에는 신청할 수 없습니다.', ephemeral: true });
+        return interaction.reply({
+          content: '❌ 본인이 만든 파티에는 신청할 수 없습니다.',
+          flags: MessageFlags.Ephemeral,
+        });
       }
 
       const statusField = embed?.fields?.find(f => f.name === '상태');
       if (statusField?.value === '🔴 마감') {
-        return interaction.reply({ content: '❌ 이미 마감된 파티입니다.', ephemeral: true });
+        return interaction.reply({
+          content: '❌ 이미 마감된 파티입니다.',
+          flags: MessageFlags.Ephemeral,
+        });
       }
 
       if (!partyApplicants.has(messageId)) {
@@ -72,7 +78,10 @@ client.on(Events.InteractionCreate, async interaction => {
       const applicants = partyApplicants.get(messageId);
 
       if (applicants.has(interaction.user.id)) {
-        return interaction.reply({ content: '⚠️ 이미 참가 신청을 하셨습니다!', ephemeral: true });
+        return interaction.reply({
+          content: '⚠️ 이미 참가 신청을 하셨습니다!',
+          flags: MessageFlags.Ephemeral,
+        });
       }
 
       applicants.add(interaction.user.id);
@@ -90,8 +99,11 @@ client.on(Events.InteractionCreate, async interaction => {
         .setFooter({ text: '참가하기 버튼을 눌러 파티 신청을 하세요!' })
         .setTimestamp(embed?.timestamp ? new Date(embed.timestamp) : new Date());
 
-      await interaction.message.edit({ embeds: [updatedEmbed] });
-      await interaction.reply(`✅ **${interaction.user}**님이 파티에 참가 신청을 했습니다!`);
+      // 메시지 수정 + 인터랙션 응답을 한 번에 처리
+      await interaction.update({ embeds: [updatedEmbed], components: interaction.message.components });
+
+      // 공개 채팅 알림
+      await interaction.followUp(`✅ **${interaction.user}**님이 파티에 참가 신청을 했습니다!`);
 
       // 파티장 DM 알림
       try {
@@ -110,7 +122,10 @@ client.on(Events.InteractionCreate, async interaction => {
     // ── 파티 마감 ─────────────────────────────────────────────────────────
     if (action === 'close_party') {
       if (interaction.user.id !== creatorId) {
-        return interaction.reply({ content: '❌ 파티 마감은 모집자만 할 수 있습니다.', ephemeral: true });
+        return interaction.reply({
+          content: '❌ 파티 마감은 모집자만 할 수 있습니다.',
+          flags: MessageFlags.Ephemeral,
+        });
       }
 
       const applicants = partyApplicants.get(messageId) ?? new Set();
@@ -145,14 +160,14 @@ client.on(Events.InteractionCreate, async interaction => {
           .setDisabled(true),
       );
 
-      await interaction.message.edit({ embeds: [closedEmbed], components: [disabledRow] });
-      await interaction.reply('🔒 파티가 마감되었습니다!');
+      await interaction.update({ embeds: [closedEmbed], components: [disabledRow] });
+      await interaction.followUp('🔒 파티가 마감되었습니다!');
     }
 
   } catch (err) {
     console.error('버튼 인터랙션 오류:', err);
     try {
-      const msg = { content: '❌ 오류가 발생했습니다.', ephemeral: true };
+      const msg = { content: '❌ 오류가 발생했습니다.', flags: MessageFlags.Ephemeral };
       interaction.replied || interaction.deferred
         ? await interaction.followUp(msg)
         : await interaction.reply(msg);
