@@ -1,0 +1,14 @@
+{
+  "name": "maple-party-bot",
+  "version": "1.0.0",
+  "description": "메이플스토리 디스코드 파티 모집 봇",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "deploy": "node deploy-commands.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.18.0",
+    "dotenv": "^16.5.0"
+  }
+}

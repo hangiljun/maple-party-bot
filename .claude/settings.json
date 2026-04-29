@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh auth *)",
+      "Bash(git --version)",
+      "Bash(git -C \"d:/originalmaple\" status)",
+      "Bash(git init *)"
+    ]
+  }
+}
