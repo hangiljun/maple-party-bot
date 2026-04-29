@@ -31,7 +31,6 @@ client.once(Events.ClientReady, () => {
 });
 
 client.on(Events.InteractionCreate, async interaction => {
-  // ─── 슬래시 커맨드 ────────────────────────────────────────────────────────
   if (interaction.isChatInputCommand()) {
     const command = client.commands.get(interaction.commandName);
     if (!command) return;
@@ -47,7 +46,6 @@ client.on(Events.InteractionCreate, async interaction => {
     return;
   }
 
-  // ─── 버튼 인터랙션 ────────────────────────────────────────────────────────
   if (!interaction.isButton()) return;
 
   try {
@@ -55,7 +53,6 @@ client.on(Events.InteractionCreate, async interaction => {
     const messageId = interaction.message.id;
     const embed = interaction.message.embeds[0];
 
-    // ── 참가하기 ──────────────────────────────────────────────────────────
     if (action === 'join_party') {
       if (interaction.user.id === creatorId) {
         return interaction.reply({
@@ -64,17 +61,14 @@ client.on(Events.InteractionCreate, async interaction => {
         });
       }
 
-      const statusField = embed?.fields?.find(f => f.name === '상태');
-      if (statusField?.value === '🔴 마감') {
+      if (embed?.fields?.find(f => f.name === '상태')?.value === '🔴 마감') {
         return interaction.reply({
           content: '❌ 이미 마감된 파티입니다.',
           flags: MessageFlags.Ephemeral,
         });
       }
 
-      if (!partyApplicants.has(messageId)) {
-        partyApplicants.set(messageId, new Set());
-      }
+      if (!partyApplicants.has(messageId)) partyApplicants.set(messageId, new Set());
       const applicants = partyApplicants.get(messageId);
 
       if (applicants.has(interaction.user.id)) {
@@ -97,15 +91,11 @@ client.on(Events.InteractionCreate, async interaction => {
           { name: '상태', value: '🟢 모집 중', inline: true },
         )
         .setFooter({ text: '참가하기 버튼을 눌러 파티 신청을 하세요!' })
-        .setTimestamp(embed?.timestamp ? new Date(embed.timestamp) : new Date());
+        .setTimestamp(new Date(embed.timestamp));
 
-      // 메시지 수정 + 인터랙션 응답을 한 번에 처리
       await interaction.update({ embeds: [updatedEmbed], components: interaction.message.components });
-
-      // 공개 채팅 알림
       await interaction.followUp(`✅ **${interaction.user}**님이 파티에 참가 신청을 했습니다!`);
 
-      // 파티장 DM 알림
       try {
         const creator = await client.users.fetch(creatorId);
         await creator.send(
@@ -113,13 +103,11 @@ client.on(Events.InteractionCreate, async interaction => {
           `> ${embed?.description ?? ''}\n` +
           `> 채널: <#${interaction.channelId}>`
         );
-      } catch {
-        // DM 차단 시 무시
-      }
+      } catch {}
+
       return;
     }
 
-    // ── 파티 마감 ─────────────────────────────────────────────────────────
     if (action === 'close_party') {
       if (interaction.user.id !== creatorId) {
         return interaction.reply({
@@ -143,7 +131,7 @@ client.on(Events.InteractionCreate, async interaction => {
           { name: '상태', value: '🔴 마감', inline: true },
         )
         .setFooter({ text: '파티가 마감되었습니다.' })
-        .setTimestamp(embed?.timestamp ? new Date(embed.timestamp) : new Date());
+        .setTimestamp(new Date(embed.timestamp));
 
       const disabledRow = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
